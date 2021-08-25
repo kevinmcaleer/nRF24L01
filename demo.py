@@ -8,26 +8,22 @@ from machine import SPI, Pin
 from time import sleep
 
 # spi = 1
-cs = Pin(21, mode=Pin.OUT, value=1)
-ce = Pin(22, mode=Pin.OUT, value=0)
-channel = 46
-payload_size = 4 
+csn = Pin(14, mode=Pin.OUT, value=1)
+ce = Pin(17, mode=Pin.OUT, value=0)
+# channel = 46
+# payload_size = 4 
 led = Pin(25, Pin.OUT)
 
 # create the radio
-# nrd24 = NRF24L01(spi=SPI(0), cs=cs, ce=ce, channel=channel, payload_size=payload_size)
 
 # Define the channel or 'pipes' the radios use.
 pipes = (b"\xe1\xf0\xf0\xf0\xf0",b"\xd2\xf0\xf0\xf0\xf0")
 
 def setup():
-    nrf = NRF24L01(SPI(0), cs, ce, payload_size=4)
-    
+    nrf = NRF24L01(SPI(0), csn, ce, payload_size=8)
     nrf.open_tx_pipe(pipes[0])
     nrf.open_rx_pipe(1, pipes[1])
     nrf.start_listening()
-
-    led.value(0)
     return nrf
 
 def flash_led(times:int=None):
