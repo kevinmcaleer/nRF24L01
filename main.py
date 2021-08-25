@@ -11,12 +11,13 @@ import struct
 csn = Pin(14, mode=Pin.OUT, value=1) # Chip Select Not
 ce = Pin(17, mode=Pin.OUT, value=0)  # Chip Enable
 led = Pin(25, Pin.OUT)               # Onboard LED
+payload_size = 20
 
 # Define the channel or 'pipes' the radios use.
 # switch round the pipes depending if this is a sender or receiver pico
 
-role = "send"
-# role = "receive"
+# role = "send"
+role = "receive"
 
 if role == "send":
     send_pipe = b"\xe1\xf0\xf0\xf0\xf0"
@@ -27,7 +28,7 @@ else:
 
 def setup():
     print("Initialising the nRF24L0+ Module")
-    nrf = NRF24L01(SPI(0), csn, ce, payload_size=8)
+    nrf = NRF24L01(SPI(0), csn, ce, payload_size=payload_size)
     nrf.open_tx_pipe(send_pipe)
     nrf.open_rx_pipe(1, receive_pipe)
     nrf.start_listening()
@@ -45,24 +46,30 @@ def auto_ack(nrf):
     nrf.reg_write(0x01, 0b11111000)
 
 def send(nrf, msg):
+    print("sending message.", msg)
     nrf.stop_listening()
-    for n in range(len(msg)):
-        try:
-            print("sending...")
-            nrf.send(struct.pack("s",msg[n]))
-        except OSError:
-            print("Sorry message not sent")
+    # for n in range(len(msg)):
+    try:
+        encoded_string = msg.encode()
+        byte_array = bytearray(encoded_string)
+        buf = struct.pack("s", byte_array)
+        nrf.send(buf)
+    except OSError:
+        print(role,"Sorry message not sent")
+    # print("message sent.")
     nrf.start_listening()
 
 def receive(nrf):
     msg = ""
     if nrf.any():
-        print("processing message")
+        print(role,"processing message")
         package = nrf.recv()
         message = struct.unpack("s",package)
         msg = message
-        print("message received:", str(message))
-        flash_led(3)
+        print(role,"message received:", str(message))
+        flash_led(1)
+    # else: 
+    #     print(role,"nothing")
     return msg
 
 # main code loop
@@ -70,8 +77,12 @@ def receive(nrf):
 flash_led(1)
 nrf = setup()
 auto_ack(nrf)
+nrf.start_listening()
 while True:
-    send(nrf, "hello world")
-    receive(nrf)
+    if role == "send":
+        send(nrf, "Yello world")
+        send(nrf, "Test")
+    else:
+        receive(nrf)
     flash_led(1)
-    sleep(0.1)
+    sleep(0.01)
