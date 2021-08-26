@@ -40,49 +40,50 @@ def flash_led(times:int=None):
         led.value(1)
         sleep(0.01)
         led.value(0)
-        sleep(0.1)
-
-def auto_ack(nrf):
-    nrf.reg_write(0x01, 0b11111000)
+        sleep(0.01)
 
 def send(nrf, msg):
     print("sending message.", msg)
     nrf.stop_listening()
-    # for n in range(len(msg)):
-    try:
-        encoded_string = msg.encode()
-        byte_array = bytearray(encoded_string)
-        buf = struct.pack("s", byte_array)
-        nrf.send(buf)
-    except OSError:
-        print(role,"Sorry message not sent")
-    # print("message sent.")
+    for n in range(len(msg)):
+        try:
+            encoded_string = msg[n].encode()
+            byte_array = bytearray(encoded_string)
+            buf = struct.pack("s", byte_array)
+            nrf.send(buf)
+            # print(role,"message",msg[n],"sent")
+            flash_led(1)
+        except OSError:
+            print(role,"Sorry message not sent")
+    nrf.send("\n")
     nrf.start_listening()
 
-def receive(nrf):
-    msg = ""
-    if nrf.any():
-        print(role,"processing message")
-        package = nrf.recv()
-        message = struct.unpack("s",package)
-        msg = message
-        print(role,"message received:", str(message))
-        flash_led(1)
-    # else: 
-    #     print(role,"nothing")
-    return msg
-
 # main code loop
-
 flash_led(1)
 nrf = setup()
-auto_ack(nrf)
 nrf.start_listening()
+msg_string = ""
+
 while True:
+    msg = ""
     if role == "send":
         send(nrf, "Yello world")
         send(nrf, "Test")
     else:
-        receive(nrf)
-    flash_led(1)
-    sleep(0.01)
+        # Check for Messages
+        if nrf.any():
+            package = nrf.recv()          
+            message = struct.unpack("s",package)
+            msg = message[0].decode()
+            flash_led(1)
+
+            # Check for the new line character
+            if (msg == "\n") and (len(msg_string) <= 20):
+                print("full message",msg_string, msg)
+                msg_string = ""
+            else:
+                if len(msg_string) <= 20:
+                    msg_string = msg_string + msg
+                else:
+                    msg_string = ""
+
